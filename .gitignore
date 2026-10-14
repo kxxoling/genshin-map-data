@@ -1,0 +1,4 @@
+node_modules/
+.DS_Store
+# Run summary consumed by the release workflow, never committed
+snapshot-summary.json

@@ -1,0 +1,99 @@
+name: update-snapshot
+
+# Scheduled snapshot refresh of the official map data:
+# - Runs every Monday 08:00 UTC; probes map/info + the game version, then
+#   refreshes cheaply (icons are reused, tiles are skipped unless map_version
+#   changed)
+# - Commits only when the snapshot actually changed - a no-change run leaves
+#   the repo byte-identical (no fetchedAt-only commits) and produces no
+#   release
+# - Cuts a GitHub release per game version plus patch releases for data-only
+#   updates, with full and diff snapshot bundles attached
+# - On real changes, notifies the consumer repo via repository_dispatch
+#   (which bumps its submodule pointer and redeploys)
+#
+# Versions checked 2026-10: checkout@v7 / setup-node@v7 / node 24 (Active LTS)
+# Dispatch prerequisites (this repo's Settings):
+#   Variables -> CONSUMER_REPO: consumer repo full name (e.g. kxxoling/genshin-pix-map)
+#   Secrets   -> DISPATCH_TOKEN: PAT with contents:read + actions:write on it
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      game_version:
+        description: 'Game version override, full semver (X.Y.Z) - use when the launcher API lags behind the live version'
+        required: false
+        default: ''
+
+# Never let a scheduled run and a manual run fetch/commit concurrently
+concurrency:
+  group: update-snapshot
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    # CI-level backstop: never bill 6 idle hours if something still hangs
+    timeout-minutes: 120
+    steps:
+      # Full history + tags: the release step diffs against previous release tags
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Fetch official data
+        run: node scripts/fetch-official.mjs
+        env:
+          GAME_VERSION: ${{ inputs.game_version }}
+
+      - name: Commit snapshot
+        id: commit
+        run: |
+          # Reserved noreply identity of the github-actions[bot] app user
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "no data changes"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: update official map data snapshot $(date -u +%F)"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "new_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            # Real change = anything beyond meta.json (which always bumps fetchedAt)
+            if git diff --name-only HEAD~1 HEAD -- data/ | grep -vqx 'data/teyvat/meta.json'; then
+              echo "real_change=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "real_change=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      # Runs even without a fresh commit: the bootstrap branch in
+      # cut-release.sh cuts the current version's initial release (tagging
+      # HEAD) while no release tags exist yet.
+      - name: Cut release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REAL_CHANGE: ${{ steps.commit.outputs.real_change }}
+          NEW_SHA: ${{ steps.commit.outputs.new_sha }}
+        run: bash scripts/cut-release.sh
+
+      - name: Notify consumer repo (bump submodule pointer and redeploy)
+        if: steps.commit.outputs.real_change == 'true'
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer ${{ secrets.DISPATCH_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ vars.CONSUMER_REPO }}/dispatches" \
+            -d '{"event_type": "map-data-updated"}'
+          echo "notified ${{ vars.CONSUMER_REPO }}"
