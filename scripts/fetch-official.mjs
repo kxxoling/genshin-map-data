@@ -341,9 +341,11 @@ function slimLabel(node) {
   if (node.children?.length) out.children = node.children.map(slimLabel)
   return out
 }
+// Pretty-printed like meta.json: the tree is small and changes land as
+// readable line-level diffs.
 const labelsChanged = writeIfChanged(
   resolve(DATA_DIR, 'labels.json'),
-  `${JSON.stringify(tree.map(slimLabel))}\n`,
+  `${JSON.stringify(tree.map(slimLabel), null, 2)}\n`,
 )
 
 // Points: slim fields, coordinates rounded to 2 decimals. Sorted by id so git
@@ -360,7 +362,13 @@ const slimPoints = points
     return out
   })
   .sort((a, b) => a.id - b.id)
-const pointsChanged = writeIfChanged(POINTS_PATH, `${JSON.stringify(slimPoints)}\n`)
+// One record per line: the file stays a standard JSON array (consumers keep
+// plain JSON.parse) at ~2% size overhead, while git diffs stay entry-level
+// instead of rewriting a single 4MB line on every snapshot.
+const pointsChanged = writeIfChanged(
+  POINTS_PATH,
+  `[\n${slimPoints.map((p) => JSON.stringify(p)).join(',\n')}\n]\n`,
+)
 
 // Meta is written last and only when something actually changed, with
 // fetchedAt excluded from the comparison so a timestamp alone never produces
