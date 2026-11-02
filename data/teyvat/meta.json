@@ -14,5 +14,5 @@
   "maxZoom": 0,
   "tileUrlTemplate": "tiles/{x}_{y}_{suffix}.webp",
   "cdnTileUrlTemplate": "https://act-webstatic.mihoyo.com/ys-map-op/map/{mapId}/{mapVersion}/{x}_{y}_{suffix}.webp",
-  "fetchedAt": "2026-10-26T15:05:27.640Z"
+  "fetchedAt": "2026-11-02T18:09:29.283Z"
 }
