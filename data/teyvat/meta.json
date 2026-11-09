@@ -1,18 +1,18 @@
 {
   "mapId": 2,
-  "mapVersion": "eea752b746ae1f2e0c1988a574f2b7b0",
-  "gameVersion": "7.1.0",
+  "mapVersion": "bd70cde160dbd523926208d9fa8961a1",
+  "gameVersion": "7.2.0",
   "origin": [
-    24206,
-    8918
+    24207,
+    16411
   ],
   "totalSize": [
     36864,
-    18432
+    32768
   ],
-  "minZoom": -3,
+  "minZoom": -4,
   "maxZoom": 0,
   "tileUrlTemplate": "tiles/{x}_{y}_{suffix}.webp",
   "cdnTileUrlTemplate": "https://act-webstatic.mihoyo.com/ys-map-op/map/{mapId}/{mapVersion}/{x}_{y}_{suffix}.webp",
-  "fetchedAt": "2026-11-02T18:09:29.283Z"
+  "fetchedAt": "2026-11-09T19:10:14.152Z"
 }
