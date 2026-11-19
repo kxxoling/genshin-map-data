@@ -8,7 +8,7 @@ submodule.
 
 - `data/teyvat/meta.json` — map metadata (versions, origin, canvas size, tile URL template)
 - `data/teyvat/labels.json` — label tree
-- `data/teyvat/points.json` — all points, sorted by id
+- `data/teyvat/points.json` — all points, sorted by id, one record per line
 - `data/teyvat/icons/` — marker icons (64px webp)
 - `data/teyvat/tiles/` — base-map tiles, full zoom pyramid (~73MB)
 
