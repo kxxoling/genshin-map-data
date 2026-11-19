@@ -343,7 +343,7 @@ function slimLabel(node) {
 }
 const labelsChanged = writeIfChanged(
   resolve(DATA_DIR, 'labels.json'),
-  `${JSON.stringify(tree.map(slimLabel))}\n`,
+  `${JSON.stringify(tree.map(slimLabel), null, 2)}\n`,
 )
 
 // Points: slim fields, coordinates rounded to 2 decimals. Sorted by id so git
@@ -360,7 +360,10 @@ const slimPoints = points
     return out
   })
   .sort((a, b) => a.id - b.id)
-const pointsChanged = writeIfChanged(POINTS_PATH, `${JSON.stringify(slimPoints)}\n`)
+const pointsChanged = writeIfChanged(
+  POINTS_PATH,
+  `[\n${slimPoints.map((p) => JSON.stringify(p)).join(',\n')}\n]\n`,
+)
 
 // Meta is written last and only when something actually changed, with
 // fetchedAt excluded from the comparison so a timestamp alone never produces
